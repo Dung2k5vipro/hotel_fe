@@ -119,11 +119,21 @@ function getApiOrigin() {
     return window.location.origin;
   }
 
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:4000";
+  return process.env.NEXT_PUBLIC_API_URL ?? "";
 }
 
 function getLoginUrl() {
-  return new URL(LOGIN_PATH, getApiOrigin()).toString();
+  const apiOrigin = getApiOrigin();
+
+  if (!apiOrigin) {
+    return LOGIN_PATH;
+  }
+
+  try {
+    return new URL(LOGIN_PATH, apiOrigin).toString();
+  } catch {
+    return LOGIN_PATH;
+  }
 }
 
 function buildDebugBodyPreview(body: Record<string, unknown>) {

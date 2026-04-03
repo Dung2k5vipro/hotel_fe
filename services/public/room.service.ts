@@ -1,3 +1,6 @@
+import { request } from "@/services/api";
+import type { PublicRoomDetail, PublicRoomType } from "@/types/public/public-room";
+
 type UnknownRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -99,42 +102,31 @@ function pickStringArray(record: UnknownRecord, keys: string[]) {
   return null;
 }
 
-function isLoaiPhongLikeRecord(value: unknown): value is UnknownRecord {
+function isRoomTypeLikeRecord(value: unknown): value is UnknownRecord {
   if (!isRecord(value)) {
     return false;
   }
 
   return [
-    "loaiPhongId",
     "LoaiPhong_ID",
     "LoaiPhongId",
     "LoaiPhongID",
-    "loai_phong_id",
-    "id",
-    "ID",
-    "tenLoaiPhong",
     "TenLoaiPhong",
-    "giaCoBan",
     "GiaCoBan",
-    "soNguoiToiDa",
     "SoNguoiToiDa",
-    "sucChua",
-    "SucChua",
-    "moTa",
     "MoTa",
-    "hinhAnh",
     "HinhAnh",
     "galleryImages",
     "GalleryImages",
   ].some((key) => key in value);
 }
 
-function unwrapLoaiPhongRecord(input: unknown, depth = 0): UnknownRecord | null {
-  if (!isRecord(input) || depth > 4) {
+function unwrapRoomTypeRecord(input: unknown, depth = 0): UnknownRecord | null {
+  if (!isRecord(input) || depth > 5) {
     return null;
   }
 
-  if (isLoaiPhongLikeRecord(input)) {
+  if (isRoomTypeLikeRecord(input)) {
     return input;
   }
 
@@ -152,7 +144,7 @@ function unwrapLoaiPhongRecord(input: unknown, depth = 0): UnknownRecord | null 
   ];
 
   for (const candidate of candidates) {
-    const unwrapped = unwrapLoaiPhongRecord(candidate, depth + 1);
+    const unwrapped = unwrapRoomTypeRecord(candidate, depth + 1);
 
     if (unwrapped) {
       return unwrapped;
@@ -162,114 +154,128 @@ function unwrapLoaiPhongRecord(input: unknown, depth = 0): UnknownRecord | null 
   return source;
 }
 
-export interface LoaiPhong {
-  loaiPhongId: number;
-  tenLoaiPhong: string;
-  giaCoBan: number;
-  soNguoiToiDa: number;
-  moTa?: string;
-  hinhAnh?: string;
-  galleryImages?: string[];
+function findListPayload(payload: unknown, depth = 0): unknown[] | null {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (!isRecord(payload) || depth > 5) {
+    return null;
+  }
+
+  const source = payload as UnknownRecord;
+  const candidates = [
+    source.data,
+    source.items,
+    source.results,
+    source.result,
+    source.payload,
+    source.loaiPhong,
+    source.loaiPhongs,
+    source.LoaiPhong,
+    source.LoaiPhongs,
+    source.roomTypes,
+    source.RoomTypes,
+  ];
+
+  for (const candidate of candidates) {
+    const found = findListPayload(candidate, depth + 1);
+
+    if (found !== null) {
+      return found;
+    }
+  }
+
+  return null;
 }
 
-export interface LoaiPhongPayload {
-  tenLoaiPhong: string;
-  giaCoBan: number;
-  soNguoiToiDa: number;
-  moTa?: string;
-  hinhAnh?: string;
-  galleryImages?: string[];
+function extractListPayload(payload: unknown) {
+  return findListPayload(payload) ?? [];
 }
 
-export interface LoaiPhongApiRaw {
-  loaiPhongId?: number | string;
-  LoaiPhong_ID?: number | string;
-  LoaiPhongId?: number | string;
-  LoaiPhongID?: number | string;
-  id?: number | string;
-  tenLoaiPhong?: string;
-  TenLoaiPhong?: string;
-  giaCoBan?: number | string;
-  GiaCoBan?: number | string;
-  donGia?: number | string;
-  DonGia?: number | string;
-  gia?: number | string;
-  Gia?: number | string;
-  soNguoiToiDa?: number | string;
-  SoNguoiToiDa?: number | string;
-  sucChua?: number | string;
-  SucChua?: number | string;
-  moTa?: string;
-  MoTa?: string;
-  mota?: string;
-  Mota?: string;
-  description?: string;
-  Description?: string;
-  hinhAnh?: string;
-  HinhAnh?: string;
-  image?: string;
-  Image?: string;
-  thumbnail?: string;
-  Thumbnail?: string;
-  galleryImages?: unknown;
-  GalleryImages?: unknown;
-  gallery?: unknown;
-  Gallery?: unknown;
-  danhSachAnh?: unknown;
-  DanhSachAnh?: unknown;
+function extractItemPayload(payload: unknown, depth = 0): unknown {
+  if (!isRecord(payload) || depth > 5) {
+    return payload;
+  }
+
+  const source = payload as UnknownRecord;
+  const candidates = [
+    source.data,
+    source.item,
+    source.result,
+    source.payload,
+    source.loaiPhong,
+    source.LoaiPhong,
+    source.roomType,
+    source.RoomType,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate === undefined || candidate === null || Array.isArray(candidate)) {
+      continue;
+    }
+
+    if (tryNormalizePublicRoomType(candidate)) {
+      return candidate;
+    }
+
+    const unwrapped = extractItemPayload(candidate, depth + 1);
+
+    if (unwrapped !== candidate) {
+      return unwrapped;
+    }
+  }
+
+  return payload;
 }
 
-export function normalizeLoaiPhong(raw: unknown): LoaiPhong {
-  const record = unwrapLoaiPhongRecord(raw);
+function normalizePublicRoomType(raw: unknown): PublicRoomType {
+  const record = unwrapRoomTypeRecord(raw);
 
   if (!record) {
     throw new Error("Dữ liệu loại phòng không hợp lệ.");
   }
 
   const loaiPhongId = pickNumber(record, [
-    "loaiPhongId",
     "LoaiPhong_ID",
     "LoaiPhongId",
     "LoaiPhongID",
-    "loai_phong_id",
+    "loaiPhongId",
     "id",
     "ID",
-    "maLoaiPhong",
-    "MaLoaiPhong",
   ]);
   const tenLoaiPhong = pickString(record, [
-    "tenLoaiPhong",
     "TenLoaiPhong",
-    "ten_loai_phong",
-    "loaiPhong",
-    "LoaiPhong",
-    "roomTypeName",
-    "RoomTypeName",
+    "tenLoaiPhong",
+    "name",
+    "Name",
   ]);
   const giaCoBan = pickNumber(record, [
-    "giaCoBan",
     "GiaCoBan",
-    "gia_co_ban",
-    "donGia",
+    "giaCoBan",
     "DonGia",
+    "donGia",
     "gia",
     "Gia",
   ]);
   const soNguoiToiDa = pickNumber(record, [
-    "soNguoiToiDa",
     "SoNguoiToiDa",
-    "so_nguoi_toi_da",
-    "sucChua",
+    "soNguoiToiDa",
     "SucChua",
-    "soNguoi",
-    "SoNguoi",
+    "sucChua",
   ]);
   const moTa =
-    pickString(record, ["moTa", "MoTa", "mota", "Mota", "description", "Description"]) ??
-    undefined;
+    pickString(record, ["MoTa", "moTa", "Mota", "description", "Description"]) ??
+    "";
   const hinhAnh =
-    pickString(record, ["hinhAnh", "HinhAnh", "image", "Image", "thumbnail", "Thumbnail"]) ??
-    undefined;
+    pickString(record, [
+      "HinhAnh",
+      "hinhAnh",
+      "Image",
+      "image",
+      "Thumbnail",
+      "thumbnail",
+    ]) ?? null;
   const galleryImages =
     pickStringArray(record, [
       "galleryImages",
@@ -294,35 +300,48 @@ export function normalizeLoaiPhong(raw: unknown): LoaiPhong {
   }
 
   return {
-    loaiPhongId,
-    tenLoaiPhong,
-    giaCoBan,
-    soNguoiToiDa,
-    moTa,
-    hinhAnh,
+    LoaiPhong_ID: loaiPhongId,
+    TenLoaiPhong: tenLoaiPhong,
+    GiaCoBan: giaCoBan,
+    SoNguoiToiDa: soNguoiToiDa,
+    MoTa: moTa,
+    HinhAnh: hinhAnh,
     galleryImages,
   };
 }
 
-export function tryNormalizeLoaiPhong(raw: unknown) {
+function normalizePublicRoomDetail(raw: unknown): PublicRoomDetail {
+  const normalized = normalizePublicRoomType(raw);
+
+  return {
+    ...normalized,
+    galleryImages: normalized.galleryImages ?? [],
+  };
+}
+
+function tryNormalizePublicRoomType(raw: unknown) {
   try {
-    return normalizeLoaiPhong(raw);
+    return normalizePublicRoomType(raw);
   } catch {
     return null;
   }
 }
 
-export function buildLoaiPhongRequestBody(payload: LoaiPhongPayload) {
-  const normalizedGalleryImages = (payload.galleryImages ?? [])
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0);
+export async function getPublicRoomTypes() {
+  const payload = await request<unknown>("/api/public/loai-phong", {
+    cache: "no-store",
+  });
 
-  return {
-    TenLoaiPhong: payload.tenLoaiPhong,
-    GiaCoBan: payload.giaCoBan,
-    SoNguoiToiDa: payload.soNguoiToiDa,
-    MoTa: payload.moTa?.trim() ?? "",
-    HinhAnh: payload.hinhAnh?.trim() ?? "",
-    galleryImages: normalizedGalleryImages,
-  };
+  return extractListPayload(payload)
+    .map((item) => tryNormalizePublicRoomType(item))
+    .filter((item): item is PublicRoomType => item !== null)
+    .sort((currentItem, nextItem) => currentItem.LoaiPhong_ID - nextItem.LoaiPhong_ID);
+}
+
+export async function getPublicRoomDetail(id: number) {
+  const payload = await request<unknown>(`/api/public/loai-phong/${id}`, {
+    cache: "no-store",
+  });
+
+  return normalizePublicRoomDetail(extractItemPayload(payload));
 }

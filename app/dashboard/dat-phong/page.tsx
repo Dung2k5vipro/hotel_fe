@@ -20,6 +20,7 @@ import { useAuthUser } from "@/hooks/use-auth-user";
 import {
   mapDatPhongErrorMessage,
   normalizeDatPhongDateInput,
+  toDatPhongBackendDateTime,
 } from "@/lib/dat-phong";
 import {
   canDeleteBookings,
@@ -484,7 +485,10 @@ export default function DatPhongPage() {
     });
 
     try {
-      const rooms = await checkAvailability(params);
+      const rooms = await checkAvailability({
+        ngayNhanPhong: toDatPhongBackendDateTime(params.ngayNhanPhong),
+        ngayTraPhong: toDatPhongBackendDateTime(params.ngayTraPhong),
+      });
       const enrichedRooms = enrichAvailableRooms(
         rooms.length > 0 ? rooms : fallbackRooms,
         latestPhongList,
@@ -568,10 +572,15 @@ export default function DatPhongPage() {
     datPhongId?: number;
   }) {
     try {
+      const payload: DatPhongPayload = {
+        ...params.payload,
+        ngayNhanPhong: toDatPhongBackendDateTime(params.payload.ngayNhanPhong),
+        ngayTraPhong: toDatPhongBackendDateTime(params.payload.ngayTraPhong),
+      };
       const responseItem =
         params.mode === "create"
-          ? await createDatPhong(params.payload)
-          : await updateDatPhong(params.datPhongId ?? 0, params.payload);
+          ? await createDatPhong(payload)
+          : await updateDatPhong(params.datPhongId ?? 0, payload);
 
       if (!responseItem) {
         return null;

@@ -59,6 +59,52 @@ function formatCurrencyVnd(value: number) {
   return `${new Intl.NumberFormat("vi-VN").format(value)} VND`;
 }
 
+function pad2(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function formatDateTimeLocalValue(date: Date) {
+  const year = date.getFullYear();
+  const month = pad2(date.getMonth() + 1);
+  const day = pad2(date.getDate());
+  const hours = pad2(date.getHours());
+  const minutes = pad2(date.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function getDefaultNgayNhanPhongValue() {
+  const now = new Date();
+  const checkIn = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    14,
+    0,
+    0,
+    0,
+  );
+
+  return formatDateTimeLocalValue(checkIn);
+}
+
+function getDefaultNgayTraPhongValue(ngayNhanPhongValue: string) {
+  const checkInDate = new Date(ngayNhanPhongValue);
+  const fallbackDate = new Date();
+  const baseDate = Number.isNaN(checkInDate.getTime()) ? fallbackDate : checkInDate;
+  const checkOut = new Date(
+    baseDate.getFullYear(),
+    baseDate.getMonth(),
+    baseDate.getDate() + 1,
+    12,
+    0,
+    0,
+    0,
+  );
+
+  return formatDateTimeLocalValue(checkOut);
+}
+
 export function DatPhongForm({
   open,
   mode,
@@ -185,10 +231,13 @@ export function DatPhongForm({
       setNgayTraPhong(normalizeDatPhongDateInput(initialData.ngayTraPhong));
       setTrangThai(initialData.trangThai);
     } else {
+      const defaultNgayNhanPhong = getDefaultNgayNhanPhongValue();
+      const defaultNgayTraPhong = getDefaultNgayTraPhongValue(defaultNgayNhanPhong);
+
       setKhachHangId("");
       setSoPhong("");
-      setNgayNhanPhong("");
-      setNgayTraPhong("");
+      setNgayNhanPhong(defaultNgayNhanPhong);
+      setNgayTraPhong(defaultNgayTraPhong);
       setTrangThai("DatTruoc");
     }
 
@@ -396,8 +445,9 @@ export function DatPhongForm({
             </label>
             <Input
               id="ngayNhanPhong"
+              min={mode === "create" ? formatDateTimeLocalValue(new Date()) : undefined}
               onChange={(event) => handleNgayNhanPhongChange(event.target.value)}
-              type="date"
+              type="datetime-local"
               value={ngayNhanPhong}
             />
           </div>
@@ -410,8 +460,12 @@ export function DatPhongForm({
             </label>
             <Input
               id="ngayTraPhong"
+              min={
+                ngayNhanPhong ||
+                (mode === "create" ? formatDateTimeLocalValue(new Date()) : undefined)
+              }
               onChange={(event) => handleNgayTraPhongChange(event.target.value)}
-              type="date"
+              type="datetime-local"
               value={ngayTraPhong}
             />
           </div>

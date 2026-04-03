@@ -1,5 +1,4 @@
-const BACKEND_API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 const isBrowser = typeof window !== "undefined";
 
 export const API_URL = isBrowser ? "" : BACKEND_API_URL;
@@ -133,6 +132,10 @@ export async function requestWithMeta<T>(
   status: number;
   statusText: string;
 }> {
+  if (!isBrowser && !BACKEND_API_URL) {
+    throw new Error("Missing NEXT_PUBLIC_API_URL environment variable.");
+  }
+
   const { body, headers, method = "GET", token, ...rest } = options;
   const requestHeaders = new Headers(headers);
 

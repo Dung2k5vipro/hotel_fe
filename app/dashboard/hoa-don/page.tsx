@@ -143,8 +143,8 @@ function SummaryField({
     <div
       className={`rounded-2xl border px-4 py-4 ${
         accent
-          ? "border-slate-900 bg-slate-900 text-white"
-          : "border-slate-200 bg-slate-50 text-slate-900"
+          ? "summary-field summary-field-accent border-slate-900 bg-slate-900 text-white"
+          : "summary-field border-slate-200 bg-slate-50 text-slate-900"
       }`}
     >
       <p
@@ -368,6 +368,18 @@ export default function HoaDonPage() {
     }
   }
 
+  function handlePrintHoaDon() {
+    if (!currentHoaDon) {
+      setFeedback({
+        type: "error",
+        message: "Vui lòng tải hóa đơn trước khi in.",
+      });
+      return;
+    }
+
+    window.print();
+  }
+
   const pageAction = (
     <div className="flex items-center gap-3">
       <Badge tone={canManageHoaDon ? "default" : "danger"}>
@@ -380,16 +392,18 @@ export default function HoaDonPage() {
   );
 
   return (
-    <section className="space-y-6">
-      <PageHeader
+    <section className="hoa-don-page space-y-6">
+      <div className="no-print">
+        <PageHeader
         action={pageAction}
         description="Tra cứu hóa đơn theo đúng DatPhong_ID"
         title="Quản lý hóa đơn"
-      />
+        />
+      </div>
 
       {feedback ? (
         <div
-          className={`rounded-2xl border px-4 py-3 text-sm ${
+          className={`no-print rounded-2xl border px-4 py-3 text-sm ${
             feedback.type === "success"
               ? "border-emerald-200 bg-emerald-50 text-emerald-700"
               : "border-rose-200 bg-rose-50 text-rose-700"
@@ -400,21 +414,20 @@ export default function HoaDonPage() {
       ) : null}
 
       {!canManageHoaDon ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="no-print rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           Tài khoản hiện tại không có quyền thao tác với hóa đơn.
         </div>
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_360px]">
         <div className="space-y-6">
-          <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 p-5 shadow-sm">
+          <div className="no-print rounded-[28px] border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 p-5 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900">
                   Tra cứu hóa đơn theo đặt phòng
                 </h2>
               </div>
-              <Badge tone="default"></Badge>
             </div>
 
             <div className="mt-5 grid gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm xl:grid-cols-[220px_minmax(0,1fr)_auto_auto]">
@@ -510,7 +523,7 @@ export default function HoaDonPage() {
           </div>
 
           {summary.status === "idle" ? (
-            <div className="grid min-h-[280px] place-items-center rounded-[28px] border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
+            <div className="no-print grid min-h-[280px] place-items-center rounded-[28px] border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm">
               <div className="max-w-lg">
                 <p className="text-sm font-medium uppercase tracking-[0.18em] text-slate-400">
                   Hóa đơn
@@ -527,13 +540,13 @@ export default function HoaDonPage() {
           ) : null}
 
           {summary.status === "loading" && !currentHoaDon ? (
-            <div className="rounded-[28px] border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+            <div className="no-print rounded-[28px] border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
               Đang tải hóa đơn ...
             </div>
           ) : null}
 
           {summary.status === "error" ? (
-            <div className="rounded-[28px] border border-rose-200 bg-rose-50 p-6 shadow-sm">
+            <div className="no-print rounded-[28px] border border-rose-200 bg-rose-50 p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-rose-700">
                 Không tải được hóa đơn
               </h3>
@@ -544,7 +557,13 @@ export default function HoaDonPage() {
           ) : null}
 
           {currentHoaDon ? (
-            <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="print-area rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="print-only border-b border-slate-300 pb-4">
+                <h1 className="text-2xl font-semibold text-slate-900">Hóa đơn</h1>
+                <p className="mt-1 text-sm text-slate-600">
+                  Mã hóa đơn #{currentHoaDon.id} • Mã đặt phòng #{currentHoaDon.datPhongId}
+                </p>
+              </div>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
@@ -565,10 +584,18 @@ export default function HoaDonPage() {
                   <Badge tone={getPaymentBadgeTone(currentHoaDon)}>
                     {getPaymentLabel(currentHoaDon)}
                   </Badge>
+                  <Button
+                    className="no-print"
+                    disabled={summary.status === "loading"}
+                    onClick={handlePrintHoaDon}
+                    variant="secondary"
+                  >
+                    In hóa đơn
+                  </Button>
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="print-grid mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <SummaryField
                   label="Mã hóa đơn"
                   value={`#${currentHoaDon.id}`}
@@ -599,7 +626,7 @@ export default function HoaDonPage() {
               {currentHoaDon.hoTenKhachHang ||
               currentHoaDon.soPhong ||
               currentHoaDon.trangThaiDatPhong ? (
-                <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <div className="print-grid mt-5 grid gap-4 md:grid-cols-3">
                   <SummaryField
                     label="Khách hàng"
                     value={currentHoaDon.hoTenKhachHang ?? "Chưa cập nhật"}
@@ -618,7 +645,7 @@ export default function HoaDonPage() {
           ) : null}
         </div>
 
-        <div className="space-y-6">
+        <div className="no-print space-y-6">
           <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 p-5 text-white shadow-sm">
             <p className="text-xs uppercase tracking-[0.18em] text-slate-300">
               Thanh toán
@@ -648,20 +675,21 @@ export default function HoaDonPage() {
                   </div>
                 ) : (
                   <Button
-                    className="w-full bg-white text-slate-900 hover:bg-slate-100"
+                    className="w-full border-white/20 bg-white text-slate-900 hover:bg-slate-100"
                     disabled={
                       !canManageHoaDon || paying || summary.status === "loading"
                     }
                     onClick={() => {
                       void handlePayHoaDon();
                     }}
+                    variant="secondary"
                   >
                     {paying ? "Đang chốt thanh toán..." : "Thanh toán"}
                   </Button>
                 )}
 
                 <Button
-                  className="w-full border-white/10 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                  className="w-full border border-white/20 text-white hover:bg-white/10 hover:text-white"
                   disabled={
                     !currentHoaDon || paying || summary.status === "loading"
                   }
@@ -670,9 +698,18 @@ export default function HoaDonPage() {
                       void handleLoadHoaDon(currentHoaDon.datPhongId);
                     }
                   }}
-                  variant="secondary"
+                  variant="ghost"
                 >
                   Tải lại
+                </Button>
+
+                <Button
+                  className="w-full border border-white/20 text-white hover:bg-white/10 hover:text-white"
+                  disabled={!currentHoaDon || summary.status === "loading"}
+                  onClick={handlePrintHoaDon}
+                  variant="ghost"
+                >
+                  In hóa đơn
                 </Button>
               </div>
             ) : (
@@ -683,6 +720,69 @@ export default function HoaDonPage() {
           </div>
         </div>
       </div>
+
+      <style jsx global>{`
+        @media screen {
+          .hoa-don-page .print-only {
+            display: none;
+          }
+        }
+
+        @media print {
+          aside,
+          header,
+          .hoa-don-page .no-print {
+            display: none !important;
+          }
+
+          body {
+            background: #ffffff !important;
+            color: #000000 !important;
+          }
+
+          .hoa-don-page {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          .hoa-don-page .print-area {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            padding: 20px !important;
+          }
+
+          .hoa-don-page .print-area .summary-field {
+            border-color: #cbd5e1 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+          }
+
+          .hoa-don-page .print-area .summary-field-accent {
+            border-color: #0f172a !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+          }
+
+          .hoa-don-page .print-area .summary-field-accent p:first-child {
+            color: #475569 !important;
+          }
+
+          .hoa-don-page .print-area * {
+            color: #000000 !important;
+          }
+
+          .hoa-don-page .print-only {
+            display: block !important;
+          }
+
+          .hoa-don-page .print-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

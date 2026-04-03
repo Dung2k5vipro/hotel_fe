@@ -7,6 +7,20 @@ type DatPhongFormValidationInput = {
   ngayTraPhong: string;
 };
 
+function pad2(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function formatLocalDateTime(date: Date) {
+  const year = date.getFullYear();
+  const month = pad2(date.getMonth() + 1);
+  const day = pad2(date.getDate());
+  const hours = pad2(date.getHours());
+  const minutes = pad2(date.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 export function normalizeDatPhongDateInput(value?: string | null) {
   if (!value) {
     return "";
@@ -14,12 +28,28 @@ export function normalizeDatPhongDateInput(value?: string | null) {
 
   const normalized = repairVietnameseText(value).trim();
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(normalized)) {
     return normalized;
   }
 
-  if (normalized.includes("T")) {
-    return normalized.slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(normalized)) {
+    return normalized.slice(0, 16);
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    return `${normalized}T00:00`;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/.test(normalized)) {
+    return normalized.replace(" ", "T");
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/.test(normalized)) {
+    return normalized.replace(" ", "T").slice(0, 16);
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}T/.test(normalized)) {
+    return normalized.slice(0, 16);
   }
 
   const parsedDate = new Date(normalized);
@@ -28,7 +58,37 @@ export function normalizeDatPhongDateInput(value?: string | null) {
     return "";
   }
 
-  return parsedDate.toISOString().slice(0, 10);
+  return formatLocalDateTime(parsedDate);
+}
+
+export function toDatPhongBackendDateTime(value: string) {
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(normalized)) {
+    return normalized;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(normalized)) {
+    return `${normalized}:00`;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    return `${normalized}T00:00:00`;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/.test(normalized)) {
+    return `${normalized.replace(" ", "T")}:00`;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/.test(normalized)) {
+    return normalized.replace(" ", "T");
+  }
+
+  return normalized;
 }
 
 export function isDatPhongDateRangeValid(
