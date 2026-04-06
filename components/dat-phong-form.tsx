@@ -122,6 +122,7 @@ export function DatPhongForm({
 }: DatPhongFormProps) {
   const [khachHangId, setKhachHangId] = useState("");
   const [soPhong, setSoPhong] = useState("");
+  const [soNguoi, setSoNguoi] = useState("1");
   const [ngayNhanPhong, setNgayNhanPhong] = useState("");
   const [ngayTraPhong, setNgayTraPhong] = useState("");
   const [trangThai, setTrangThai] = useState<TrangThaiDatPhong>("DatTruoc");
@@ -227,6 +228,7 @@ export function DatPhongForm({
     if (mode === "edit" && initialData) {
       setKhachHangId(String(initialData.khachHangId));
       setSoPhong(initialData.soPhong);
+      setSoNguoi(String(initialData.soNguoi));
       setNgayNhanPhong(normalizeDatPhongDateInput(initialData.ngayNhanPhong));
       setNgayTraPhong(normalizeDatPhongDateInput(initialData.ngayTraPhong));
       setTrangThai(initialData.trangThai);
@@ -236,6 +238,7 @@ export function DatPhongForm({
 
       setKhachHangId("");
       setSoPhong("");
+      setSoNguoi("1");
       setNgayNhanPhong(defaultNgayNhanPhong);
       setNgayTraPhong(defaultNgayTraPhong);
       setTrangThai("DatTruoc");
@@ -309,6 +312,7 @@ export function DatPhongForm({
     const validationResult = validateDatPhongFormInput({
       khachHangId,
       soPhong,
+      soNguoi,
       ngayNhanPhong,
       ngayTraPhong,
     });
@@ -320,6 +324,7 @@ export function DatPhongForm({
 
     const normalizedKhachHangId = validationResult.values.khachHangId;
     const normalizedSoPhong = validationResult.values.soPhong;
+    const normalizedSoNguoi = validationResult.values.soNguoi;
     const normalizedNgayNhanPhong = validationResult.values.ngayNhanPhong;
     const normalizedNgayTraPhong = validationResult.values.ngayTraPhong;
     const normalizedTrangThai = trangThai;
@@ -361,6 +366,7 @@ export function DatPhongForm({
       const payload: DatPhongPayload = {
         khachHangId: normalizedKhachHangId,
         soPhong: normalizedSoPhong,
+        soNguoi: normalizedSoNguoi,
         ngayNhanPhong: normalizedNgayNhanPhong,
         ngayTraPhong: normalizedNgayTraPhong,
         giaThucTeMoiDem: giaThamKhao ?? undefined,
@@ -526,6 +532,19 @@ export function DatPhongForm({
               </span>
             </p>
           ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-700" htmlFor="soNguoi">
+            Số người
+          </label>
+          <Input
+            id="soNguoi"
+            min={1}
+            onChange={(event) => setSoNguoi(event.target.value)}
+            type="number"
+            value={soNguoi}
+          />
         </div>
 
         {mode === "edit" ? (

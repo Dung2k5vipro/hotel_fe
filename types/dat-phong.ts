@@ -103,6 +103,7 @@ export interface DatPhong {
   datPhongId: number;
   khachHangId: number;
   soPhong: string;
+  soNguoi: number;
   ngayNhanPhong: string;
   ngayTraPhong: string;
   trangThai: TrangThaiDatPhong;
@@ -125,6 +126,7 @@ export interface DatPhong {
 export interface DatPhongPayload {
   khachHangId: number;
   soPhong: string;
+  soNguoi: number;
   ngayNhanPhong: string;
   ngayTraPhong: string;
   giaThucTeMoiDem?: number;
@@ -142,6 +144,8 @@ export interface DatPhongApiRaw {
   KhachHangID?: number | string;
   soPhong?: string;
   SoPhong?: string;
+  soNguoi?: number | string;
+  SoNguoi?: number | string;
   ngayNhanPhong?: string;
   NgayNhanPhong?: string;
   ngay_nhan_phong?: string;
@@ -182,6 +186,8 @@ function isDatPhongLikeRecord(value: unknown): value is UnknownRecord {
     "KhachHang_ID",
     "soPhong",
     "SoPhong",
+    "soNguoi",
+    "SoNguoi",
     "ngayNhanPhong",
     "NgayNhanPhong",
     "ngayTraPhong",
@@ -370,6 +376,15 @@ export function normalizeDatPhong(raw: unknown): DatPhong {
     "roomNumber",
     "RoomNumber",
   ]);
+  const soNguoi =
+    pickNumber(record, [
+      "soNguoi",
+      "SoNguoi",
+      "numberOfGuests",
+      "NumberOfGuests",
+      "soNguoiToiDa",
+      "SoNguoiToiDa",
+    ]) ?? 1;
 
   if (datPhongId === null || khachHangId === null || !soPhong) {
     throw new Error("Không thể chuẩn hóa dữ liệu đặt phòng.");
@@ -394,6 +409,7 @@ export function normalizeDatPhong(raw: unknown): DatPhong {
     datPhongId,
     khachHangId,
     soPhong,
+    soNguoi: soNguoi >= 1 ? Math.floor(soNguoi) : 1,
     ngayNhanPhong:
       pickString(record, [
         "ngayNhanPhong",
@@ -511,10 +527,15 @@ function toApiTrangThaiDatPhong(value?: TrangThaiDatPhong | string) {
 
 export function buildDatPhongRequestBody(payload: DatPhongPayload) {
   const apiTrangThai = toApiTrangThaiDatPhong(payload.trangThai);
+  const normalizedSoNguoi =
+    Number.isFinite(payload.soNguoi) && payload.soNguoi >= 1
+      ? Math.floor(payload.soNguoi)
+      : 1;
 
   return {
     KhachHang_ID: payload.khachHangId,
     SoPhong: payload.soPhong,
+    SoNguoi: normalizedSoNguoi,
     NgayNhanPhong: payload.ngayNhanPhong,
     NgayTraPhong: payload.ngayTraPhong,
     ...(payload.giaThucTeMoiDem !== undefined

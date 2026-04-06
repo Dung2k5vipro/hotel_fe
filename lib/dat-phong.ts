@@ -1,8 +1,9 @@
-import { repairVietnameseText } from "@/lib/text";
+﻿import { repairVietnameseText } from "@/lib/text";
 
 type DatPhongFormValidationInput = {
   khachHangId: number | string;
   soPhong: string;
+  soNguoi: number | string;
   ngayNhanPhong: string;
   ngayTraPhong: string;
 };
@@ -118,54 +119,66 @@ export function validateDatPhongFormInput(
         ? input.khachHangId
         : Number(input.khachHangId),
     soPhong: input.soPhong.trim(),
+    soNguoi:
+      typeof input.soNguoi === "number" ? input.soNguoi : Number(input.soNguoi),
     ngayNhanPhong: input.ngayNhanPhong.trim(),
     ngayTraPhong: input.ngayTraPhong.trim(),
   };
 
   if (!Number.isFinite(values.khachHangId) || values.khachHangId <= 0) {
     return {
-      error: "Vui lòng chọn khách hàng hợp lệ.",
+      error: "Vui lÃ²ng chá»n khÃ¡ch hÃ ng há»£p lá»‡.",
       values,
     };
   }
 
   if (!values.ngayNhanPhong) {
     return {
-      error: "Vui lòng chọn ngày nhận phòng.",
+      error: "Vui lÃ²ng chá»n ngÃ y nháº­n phÃ²ng.",
       values,
     };
   }
 
   if (!values.ngayTraPhong) {
     return {
-      error: "Vui lòng chọn ngày trả phòng.",
+      error: "Vui lÃ²ng chá»n ngÃ y tráº£ phÃ²ng.",
       values,
     };
   }
 
   if (!isDatPhongDateRangeValid(values.ngayNhanPhong, values.ngayTraPhong)) {
     return {
-      error: "Ngày trả phòng phải sau ngày nhận phòng.",
+      error: "NgÃ y tráº£ phÃ²ng pháº£i sau ngÃ y nháº­n phÃ²ng.",
       values,
     };
   }
 
   if (!values.soPhong) {
     return {
-      error: "Vui lòng chọn phòng trống.",
+      error: "Vui lÃ²ng chá»n phÃ²ng trá»‘ng.",
+      values,
+    };
+  }
+
+  if (!Number.isFinite(values.soNguoi) || values.soNguoi < 1) {
+    return {
+      error: "So nguoi phai lon hon hoac bang 1.",
       values,
     };
   }
 
   return {
     error: null,
-    values,
+    values: {
+      ...values,
+      soNguoi: Math.floor(values.soNguoi),
+    },
   };
 }
 
 export function mapDatPhongErrorMessage(
   error: unknown,
-  fallbackMessage = "Không thể lưu đặt phòng.",
+  fallbackMessage = "KhÃ´ng thá»ƒ lÆ°u Ä‘áº·t phÃ²ng.",
 ) {
   const rawMessage = error instanceof Error ? error.message : fallbackMessage;
   const message = repairVietnameseText(rawMessage);
@@ -173,26 +186,27 @@ export function mapDatPhongErrorMessage(
 
   if (
     normalizedMessage.includes("overbook") ||
-    normalizedMessage.includes("đã được đặt") ||
-    (normalizedMessage.includes("phòng") &&
-      normalizedMessage.includes("thời gian"))
+    normalizedMessage.includes("Ä‘Ã£ Ä‘Æ°á»£c Ä‘áº·t") ||
+    (normalizedMessage.includes("phÃ²ng") &&
+      normalizedMessage.includes("thá»i gian"))
   ) {
-    return "Phòng đã được đặt trong khoảng thời gian này.";
+    return "PhÃ²ng Ä‘Ã£ Ä‘Æ°á»£c Ä‘áº·t trong khoáº£ng thá»i gian nÃ y.";
   }
 
   if (
-    normalizedMessage.includes("ngày trả") ||
+    normalizedMessage.includes("ngÃ y tráº£") ||
     normalizedMessage.includes("invalid date")
   ) {
-    return "Ngày trả phòng phải sau ngày nhận phòng.";
+    return "NgÃ y tráº£ phÃ²ng pháº£i sau ngÃ y nháº­n phÃ²ng.";
   }
 
   if (
     normalizedMessage.includes("check-in") &&
-    normalizedMessage.includes("trạng thái")
+    normalizedMessage.includes("tráº¡ng thÃ¡i")
   ) {
-    return "Không thể check-in do trạng thái đặt phòng không hợp lệ.";
+    return "KhÃ´ng thá»ƒ check-in do tráº¡ng thÃ¡i Ä‘áº·t phÃ²ng khÃ´ng há»£p lá»‡.";
   }
 
   return message || fallbackMessage;
 }
+

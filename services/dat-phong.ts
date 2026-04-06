@@ -372,6 +372,7 @@ async function updateDatPhongStatusViaDetailAndUpdate(
       return await updateDatPhong(id, {
         khachHangId: currentBooking.khachHangId,
         soPhong: currentBooking.soPhong,
+        soNguoi: currentBooking.soNguoi ?? 1,
         ngayNhanPhong: normalizeDateForPayload(currentBooking.ngayNhanPhong),
         ngayTraPhong: normalizeDateForPayload(currentBooking.ngayTraPhong),
         trangThai: status,
@@ -460,6 +461,7 @@ export async function createDatPhong(payload: DatPhongPayload) {
   logDatPhongDebug("create:payload", {
     khachHangId: payload.khachHangId,
     soPhong: payload.soPhong,
+    soNguoi: payload.soNguoi,
     ngayNhanPhong: payload.ngayNhanPhong,
     ngayTraPhong: payload.ngayTraPhong,
     trangThai: payload.trangThai ?? null,

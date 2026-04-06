@@ -321,7 +321,7 @@ function formatPercentValue(value: number | null) {
 }
 
 export default function DashboardPage() {
-  const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [metrics, setMetrics] = useState<OverviewMetrics>(INITIAL_METRICS);
   const [sourceErrors, setSourceErrors] = useState<OverviewSourceErrorMap>(
     INITIAL_SOURCE_ERRORS,
@@ -529,11 +529,16 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    const initialTimer = window.setTimeout(() => {
+      setCurrentTime(new Date());
+    }, 0);
+
     const timer = window.setInterval(() => {
       setCurrentTime(new Date());
     }, 60_000);
 
     return () => {
+      window.clearTimeout(initialTimer);
       window.clearInterval(timer);
     };
   }, []);
@@ -548,28 +553,41 @@ export default function DashboardPage() {
     };
   }, [loadOverviewMetrics]);
 
-  const greeting = useMemo(
-    () => getGreetingByHour(currentTime.getHours()),
-    [currentTime],
-  );
+  const greeting = useMemo(() => {
+    if (!currentTime) {
+      return "Xin chào";
+    }
+
+    return getGreetingByHour(currentTime.getHours());
+  }, [currentTime]);
 
   const timeLabel = useMemo(
-    () =>
-      new Intl.DateTimeFormat("vi-VN", {
+    () => {
+      if (!currentTime) {
+        return "--:--";
+      }
+
+      return new Intl.DateTimeFormat("vi-VN", {
         hour: "2-digit",
         minute: "2-digit",
-      }).format(currentTime),
+      }).format(currentTime);
+    },
     [currentTime],
   );
 
   const dateLabel = useMemo(
-    () =>
-      new Intl.DateTimeFormat("vi-VN", {
+    () => {
+      if (!currentTime) {
+        return "Đang đồng bộ thời gian...";
+      }
+
+      return new Intl.DateTimeFormat("vi-VN", {
         weekday: "long",
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
-      }).format(currentTime),
+      }).format(currentTime);
+    },
     [currentTime],
   );
 
