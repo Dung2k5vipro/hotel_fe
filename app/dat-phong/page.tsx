@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { BookingForm } from "@/components/public/BookingForm";
@@ -33,7 +33,7 @@ function normalizeErrorMessage(error: unknown, fallback: string) {
   return message.length > 0 ? message : fallback;
 }
 
-export default function PublicBookingPage() {
+function PublicBookingPageContent() {
   const searchParams = useSearchParams();
   const [roomTypes, setRoomTypes] = useState<PublicRoomType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,5 +112,29 @@ export default function PublicBookingPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function PublicBookingPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-slate-100">
+          <PublicHeader />
+
+          <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8 sm:px-6">
+            <SectionTitle
+              description="Đang chuẩn bị biểu mẫu đặt phòng."
+              title="Yêu cầu đặt phòng"
+            />
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+              Đang tải dữ liệu đặt phòng...
+            </div>
+          </div>
+        </main>
+      }
+    >
+      <PublicBookingPageContent />
+    </Suspense>
   );
 }
