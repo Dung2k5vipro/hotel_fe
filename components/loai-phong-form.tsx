@@ -209,6 +209,7 @@ export function LoaiPhongForm({
 
   return (
     <Modal
+      className="max-h-[90vh] overflow-y-auto"
       description={
         mode === "create"
           ? "Tạo loại phòng mới cho danh mục vận hành khách sạn."
