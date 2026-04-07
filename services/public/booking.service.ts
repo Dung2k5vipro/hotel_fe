@@ -8,8 +8,31 @@ import type {
 
 type UnknownRecord = Record<string, unknown>;
 
+const PUBLIC_BOOKING_ENDPOINTS = {
+  checkAvailability: [
+    "/api/public-dat-phong/check-availability",
+    "/api/public/dat-phong/check-availability",
+  ],
+  request: ["/api/public-dat-phong/request", "/api/public/dat-phong/request"],
+};
+
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isFallbackableEndpointError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+
+  return (
+    message.includes("(404") ||
+    message.includes("(405") ||
+    message.includes("not found") ||
+    message.includes("cannot post")
+  );
 }
 
 function readString(value: unknown) {
@@ -295,11 +318,27 @@ function normalizeCheckAvailabilityResponse(payload: unknown): CheckAvailability
       ? "Còn phòng cho thời gian bạn đã chọn."
       : "Không còn phòng phù hợp cho thời gian bạn đã chọn.");
 
+  const soDemLuuTruRaw = searchNumber(payload, ["soDemLuuTru", "SoDemLuuTru"]);
+  const soDemLuuTru =
+    typeof soDemLuuTruRaw === "number" && Number.isFinite(soDemLuuTruRaw) && soDemLuuTruRaw > 0
+      ? Math.floor(soDemLuuTruRaw)
+      : undefined;
+  const tongTienPhongDuKienRaw = searchNumber(payload, [
+    "tongTienPhongDuKien",
+    "TongTienPhongDuKien",
+  ]);
+  const tongTienPhongDuKien =
+    typeof tongTienPhongDuKienRaw === "number" && Number.isFinite(tongTienPhongDuKienRaw)
+      ? tongTienPhongDuKienRaw
+      : undefined;
+
   return {
     success,
     available,
     message,
     availableCount: typeof availableCount === "number" ? availableCount : undefined,
+    soDemLuuTru,
+    tongTienPhongDuKien,
   };
 }
 
@@ -336,7 +375,40 @@ function normalizeBookingRequestResponse(payload: unknown): BookingRequestRespon
   return {
     success,
     message,
-    data,
+    data: normalizeBookingResponseData(data),
+  };
+}
+
+function normalizeBookingResponseData(payload: unknown) {
+  if (!isRecord(payload)) {
+    return undefined;
+  }
+
+  const record = payload as UnknownRecord;
+  const giaMoiDemRaw = searchNumber(record, ["giaMoiDem", "GiaMoiDem"]);
+  const soDemLuuTruRaw = searchNumber(record, ["soDemLuuTru", "SoDemLuuTru"]);
+  const tongTienPhongDuKienRaw = searchNumber(record, [
+    "tongTienPhongDuKien",
+    "TongTienPhongDuKien",
+  ]);
+  const giaMoiDem =
+    typeof giaMoiDemRaw === "number" && Number.isFinite(giaMoiDemRaw)
+      ? giaMoiDemRaw
+      : undefined;
+  const soDemLuuTru =
+    typeof soDemLuuTruRaw === "number" && Number.isFinite(soDemLuuTruRaw) && soDemLuuTruRaw > 0
+      ? Math.floor(soDemLuuTruRaw)
+      : undefined;
+  const tongTienPhongDuKien =
+    typeof tongTienPhongDuKienRaw === "number" && Number.isFinite(tongTienPhongDuKienRaw)
+      ? tongTienPhongDuKienRaw
+      : undefined;
+
+  return {
+    ...record,
+    ...(giaMoiDem !== undefined ? { giaMoiDem } : {}),
+    ...(soDemLuuTru !== undefined ? { soDemLuuTru } : {}),
+    ...(tongTienPhongDuKien !== undefined ? { tongTienPhongDuKien } : {}),
   };
 }
 
@@ -383,24 +455,53 @@ function buildCheckAvailabilityPayload(
 }
 
 export async function checkAvailability(payload: CheckAvailabilityPayload) {
-  const response = await request<unknown>(
-    "/api/public/dat-phong/check-availability",
-    {
-      body: buildCheckAvailabilityPayload(payload),
-      cache: "no-store",
-      method: "POST",
-    },
-  );
+  let lastError: unknown = null;
 
-  return normalizeCheckAvailabilityResponse(response);
+  for (const endpoint of PUBLIC_BOOKING_ENDPOINTS.checkAvailability) {
+    try {
+      const response = await request<unknown>(endpoint, {
+        body: buildCheckAvailabilityPayload(payload),
+        cache: "no-store",
+        method: "POST",
+      });
+
+      return normalizeCheckAvailabilityResponse(response);
+    } catch (error) {
+      lastError = error;
+
+      if (isFallbackableEndpointError(error)) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw (lastError ?? new Error("Khong the kiem tra phong luc nay."));
 }
 
 export async function requestBooking(payload: BookingRequestPayload) {
-  const response = await request<unknown>("/api/public/dat-phong/request", {
-    body: payload,
-    cache: "no-store",
-    method: "POST",
-  });
+  let lastError: unknown = null;
 
-  return normalizeBookingRequestResponse(response);
+  for (const endpoint of PUBLIC_BOOKING_ENDPOINTS.request) {
+    try {
+      const response = await request<unknown>(endpoint, {
+        body: payload,
+        cache: "no-store",
+        method: "POST",
+      });
+
+      return normalizeBookingRequestResponse(response);
+    } catch (error) {
+      lastError = error;
+
+      if (isFallbackableEndpointError(error)) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw (lastError ?? new Error("Khong the gui yeu cau dat phong."));
 }

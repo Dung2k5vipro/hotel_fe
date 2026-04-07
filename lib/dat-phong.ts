@@ -8,6 +8,8 @@ type DatPhongFormValidationInput = {
   ngayTraPhong: string;
 };
 
+const ONE_DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
+
 function pad2(value: number) {
   return String(value).padStart(2, "0");
 }
@@ -108,6 +110,49 @@ export function isDatPhongDateRangeValid(
   }
 
   return endDate.getTime() > startDate.getTime();
+}
+
+export function calculateSoDemLuuTruFallback(
+  ngayNhanPhong?: string | null,
+  ngayTraPhong?: string | null,
+) {
+  if (!ngayNhanPhong || !ngayTraPhong) {
+    return null;
+  }
+
+  const startDate = new Date(ngayNhanPhong);
+  const endDate = new Date(ngayTraPhong);
+
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return null;
+  }
+
+  const milliseconds = endDate.getTime() - startDate.getTime();
+
+  if (milliseconds <= 0) {
+    return null;
+  }
+
+  return Math.max(1, Math.ceil(milliseconds / ONE_DAY_IN_MILLISECONDS));
+}
+
+export function calculateTongTienPhongDuKienFallback(params: {
+  giaMoiDem?: number | null;
+  soDemLuuTru?: number | null;
+}) {
+  const { giaMoiDem, soDemLuuTru } = params;
+
+  if (
+    typeof giaMoiDem !== "number" ||
+    !Number.isFinite(giaMoiDem) ||
+    typeof soDemLuuTru !== "number" ||
+    !Number.isFinite(soDemLuuTru) ||
+    soDemLuuTru < 1
+  ) {
+    return null;
+  }
+
+  return giaMoiDem * Math.floor(soDemLuuTru);
 }
 
 export function validateDatPhongFormInput(

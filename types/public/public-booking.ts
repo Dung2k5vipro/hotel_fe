@@ -10,6 +10,8 @@ export interface CheckAvailabilityResponse {
   available: boolean;
   message: string;
   availableCount?: number;
+  soDemLuuTru?: number;
+  tongTienPhongDuKien?: number;
 }
 
 export interface BookingRequestPayload {
@@ -28,5 +30,10 @@ export interface BookingRequestPayload {
 export interface BookingRequestResponse {
   success: boolean;
   message: string;
-  data?: unknown;
+  data?: {
+    giaMoiDem?: number;
+    soDemLuuTru?: number;
+    tongTienPhongDuKien?: number;
+    [key: string]: unknown;
+  };
 }

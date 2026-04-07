@@ -7,6 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
+  calculateSoDemLuuTruFallback,
+  calculateTongTienPhongDuKienFallback,
+} from "@/lib/dat-phong";
+import { formatCurrencyVND } from "@/lib/hotel";
+import {
   checkAvailability,
   requestBooking,
 } from "@/services/public/booking.service";
@@ -230,6 +235,54 @@ function buildBookingPayload(values: BookingFormValues): BookingRequestPayload {
   };
 }
 
+function resolveBookingEstimate(params: {
+  ngayNhanPhong: string;
+  ngayTraPhong: string;
+  giaMoiDemMacDinh?: number | null;
+  giaMoiDem?: number;
+  soDemLuuTru?: number;
+  tongTienPhongDuKien?: number;
+}) {
+  const soDemLuuTru =
+    (typeof params.soDemLuuTru === "number" && Number.isFinite(params.soDemLuuTru)
+      ? Math.max(1, Math.floor(params.soDemLuuTru))
+      : null) ??
+    calculateSoDemLuuTruFallback(params.ngayNhanPhong, params.ngayTraPhong);
+  const tongTienPhongDuKienFromApi =
+    typeof params.tongTienPhongDuKien === "number" &&
+    Number.isFinite(params.tongTienPhongDuKien)
+      ? params.tongTienPhongDuKien
+      : null;
+  const giaMoiDem =
+    typeof params.giaMoiDem === "number" && Number.isFinite(params.giaMoiDem)
+      ? params.giaMoiDem
+      : typeof params.giaMoiDemMacDinh === "number" &&
+          Number.isFinite(params.giaMoiDemMacDinh)
+        ? params.giaMoiDemMacDinh
+        : null;
+  const tongTienPhongDuKien =
+    tongTienPhongDuKienFromApi ??
+    calculateTongTienPhongDuKienFallback({
+      giaMoiDem,
+      soDemLuuTru,
+    });
+
+  return {
+    soDemLuuTru,
+    tongTienPhongDuKien,
+  };
+}
+
+function hasBookingEstimate(estimate: {
+  soDemLuuTru: number | null;
+  tongTienPhongDuKien: number | null;
+}) {
+  return (
+    typeof estimate.soDemLuuTru === "number" ||
+    typeof estimate.tongTienPhongDuKien === "number"
+  );
+}
+
 export function BookingForm({ roomTypes, initialLoaiPhongId }: BookingFormProps) {
   const [values, setValues] = useState<BookingFormValues>(() => {
     const defaultDateTimes = getDefaultBookingDateTimeValues();
@@ -250,8 +303,20 @@ export function BookingForm({ roomTypes, initialLoaiPhongId }: BookingFormProps)
   const [checkedPayload, setCheckedPayload] = useState<CheckAvailabilityPayload | null>(
     null,
   );
+  const [confirmedEstimate, setConfirmedEstimate] = useState<{
+    soDemLuuTru: number | null;
+    tongTienPhongDuKien: number | null;
+  } | null>(null);
 
   const minDateTimeLocal = useMemo(() => formatDateTimeLocalValue(new Date()), []);
+  const selectedRoomType = useMemo(
+    () =>
+      roomTypes.find(
+        (item) =>
+          item.LoaiPhong_ID === (parsePositiveInteger(values.loaiPhongId) ?? -1),
+      ) ?? null,
+    [roomTypes, values.loaiPhongId],
+  );
 
   const currentCheckPayload = useMemo(() => getCheckPayload(values), [values]);
   const isAvailabilityUpToDate = Boolean(
@@ -259,6 +324,27 @@ export function BookingForm({ roomTypes, initialLoaiPhongId }: BookingFormProps)
       currentCheckPayload &&
       isSameCheckPayload(checkedPayload, currentCheckPayload),
   );
+  const currentAvailabilityEstimate = useMemo(() => {
+    if (!availability || !isAvailabilityUpToDate) {
+      return null;
+    }
+
+    const estimate = resolveBookingEstimate({
+      ngayNhanPhong: values.ngayNhanPhong,
+      ngayTraPhong: values.ngayTraPhong,
+      giaMoiDemMacDinh: selectedRoomType?.GiaCoBan ?? null,
+      soDemLuuTru: availability.soDemLuuTru,
+      tongTienPhongDuKien: availability.tongTienPhongDuKien,
+    });
+
+    return hasBookingEstimate(estimate) ? estimate : null;
+  }, [
+    availability,
+    isAvailabilityUpToDate,
+    selectedRoomType,
+    values.ngayNhanPhong,
+    values.ngayTraPhong,
+  ]);
   const canSubmitBooking = Boolean(
     isAvailabilityUpToDate && availability?.available && !checking && !submitting,
   );
@@ -289,6 +375,7 @@ export function BookingForm({ roomTypes, initialLoaiPhongId }: BookingFormProps)
       setCheckedPayload(null);
       setAvailability(null);
       setFeedback(null);
+      setConfirmedEstimate(null);
     }
   }, [checkedPayload, currentCheckPayload]);
 
@@ -302,6 +389,7 @@ export function BookingForm({ roomTypes, initialLoaiPhongId }: BookingFormProps)
       ...currentValues,
       [key]: value,
     }));
+    setConfirmedEstimate(null);
     setErrors((currentErrors) => {
       if (!currentErrors[key]) {
         return currentErrors;
@@ -320,6 +408,7 @@ export function BookingForm({ roomTypes, initialLoaiPhongId }: BookingFormProps)
 
     setErrors(nextErrors);
     setFeedback(null);
+    setConfirmedEstimate(null);
 
     if (Object.keys(nextErrors).length > 0 || !payload) {
       return;
@@ -343,6 +432,7 @@ export function BookingForm({ roomTypes, initialLoaiPhongId }: BookingFormProps)
     } catch (error) {
       setCheckedPayload(null);
       setAvailability(null);
+      setConfirmedEstimate(null);
       setFeedback({
         tone: "error",
         message: normalizeErrorMessage(error, "Không thể kiểm tra phòng vào lúc này."),
@@ -360,6 +450,7 @@ export function BookingForm({ roomTypes, initialLoaiPhongId }: BookingFormProps)
 
     setErrors(nextErrors);
     setFeedback(null);
+    setConfirmedEstimate(null);
 
     if (Object.keys(nextErrors).length > 0 || !payload) {
       return;
@@ -396,6 +487,14 @@ export function BookingForm({ roomTypes, initialLoaiPhongId }: BookingFormProps)
         return;
       }
 
+      const nextConfirmedEstimate = resolveBookingEstimate({
+        ngayNhanPhong: values.ngayNhanPhong,
+        ngayTraPhong: values.ngayTraPhong,
+        giaMoiDemMacDinh: selectedRoomType?.GiaCoBan ?? null,
+        giaMoiDem: response.data?.giaMoiDem,
+        soDemLuuTru: response.data?.soDemLuuTru,
+        tongTienPhongDuKien: response.data?.tongTienPhongDuKien,
+      });
       const preservedRoomId = values.loaiPhongId;
       const defaultDateTimes = getDefaultBookingDateTimeValues();
 
@@ -407,6 +506,9 @@ export function BookingForm({ roomTypes, initialLoaiPhongId }: BookingFormProps)
       setErrors({});
       setCheckedPayload(null);
       setAvailability(null);
+      setConfirmedEstimate(
+        hasBookingEstimate(nextConfirmedEstimate) ? nextConfirmedEstimate : null,
+      );
       setFeedback({
         tone: "success",
         message:
@@ -597,6 +699,50 @@ export function BookingForm({ roomTypes, initialLoaiPhongId }: BookingFormProps)
       </div>
 
       {feedback ? <Alert tone={feedback.tone}>{feedback.message}</Alert> : null}
+
+      {currentAvailabilityEstimate ? (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          <p className="font-medium text-slate-900">Tóm tắt chi phí dự kiến</p>
+          {typeof currentAvailabilityEstimate.soDemLuuTru === "number" ? (
+            <p className="mt-1">
+              Số đêm lưu trú:{" "}
+              <span className="font-semibold text-slate-900">
+                {currentAvailabilityEstimate.soDemLuuTru}
+              </span>
+            </p>
+          ) : null}
+          {typeof currentAvailabilityEstimate.tongTienPhongDuKien === "number" ? (
+            <p className="mt-1">
+              Tổng tiền phòng dự kiến:{" "}
+              <span className="font-semibold text-slate-900">
+                {formatCurrencyVND(currentAvailabilityEstimate.tongTienPhongDuKien)}
+              </span>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {confirmedEstimate ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <p className="font-medium text-emerald-900">Thông tin xác nhận đặt phòng</p>
+          {typeof confirmedEstimate.soDemLuuTru === "number" ? (
+            <p className="mt-1">
+              Số đêm lưu trú:{" "}
+              <span className="font-semibold text-emerald-900">
+                {confirmedEstimate.soDemLuuTru}
+              </span>
+            </p>
+          ) : null}
+          {typeof confirmedEstimate.tongTienPhongDuKien === "number" ? (
+            <p className="mt-1">
+              Tổng tiền phòng dự kiến:{" "}
+              <span className="font-semibold text-emerald-900">
+                {formatCurrencyVND(confirmedEstimate.tongTienPhongDuKien)}
+              </span>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-3">
         <Button

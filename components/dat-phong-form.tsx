@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import {
+  calculateSoDemLuuTruFallback,
+  calculateTongTienPhongDuKienFallback,
   isDatPhongDateRangeValid,
   mapDatPhongErrorMessage,
   normalizeDatPhongDateInput,
@@ -150,7 +152,7 @@ export function DatPhongForm({
     );
   }, [khachHangOptions, searchKhachHang]);
 
-  const fallbackRoomOptions = useMemo(() => {
+  const fallbackRoomOptions = useMemo<AvailablePhong[]>(() => {
     return phongOptions
       .filter((item) => item.trangThai !== "BaoTri")
       .map((item) => ({
@@ -162,7 +164,7 @@ export function DatPhongForm({
       }));
   }, [phongOptions]);
 
-  const roomSelectOptions = useMemo(() => {
+  const roomSelectOptions = useMemo<AvailablePhong[]>(() => {
     if (availableRooms.length > 0) {
       return availableRooms;
     }
@@ -178,6 +180,27 @@ export function DatPhongForm({
             phongMap.get(initialData.soPhong)?.tenLoaiPhong,
           giaThamKhao:
             getPhongGiaThamKhao(phongMap.get(initialData.soPhong)) ?? undefined,
+          soDemLuuTru:
+            initialData.soDemLuuTru ??
+            calculateSoDemLuuTruFallback(
+              normalizeDatPhongDateInput(initialData.ngayNhanPhong),
+              normalizeDatPhongDateInput(initialData.ngayTraPhong),
+            ) ??
+            undefined,
+          tongTienPhongDuKien:
+            initialData.tongTienPhongDuKien ??
+            calculateTongTienPhongDuKienFallback({
+              giaMoiDem:
+                getPhongGiaThamKhao(phongMap.get(initialData.soPhong)) ?? undefined,
+              soDemLuuTru:
+                initialData.soDemLuuTru ??
+                calculateSoDemLuuTruFallback(
+                  normalizeDatPhongDateInput(initialData.ngayNhanPhong),
+                  normalizeDatPhongDateInput(initialData.ngayTraPhong),
+                ) ??
+                undefined,
+            }) ??
+            undefined,
         },
       ];
     }
@@ -217,6 +240,25 @@ export function DatPhongForm({
 
     return null;
   }, [phongMap, roomSelectOptions, soPhong]);
+  const selectedRoomOption = useMemo(
+    () => roomSelectOptions.find((item) => item.soPhong === soPhong) ?? null,
+    [roomSelectOptions, soPhong],
+  );
+  const soDemLuuTruDuKien = useMemo(
+    () =>
+      selectedRoomOption?.soDemLuuTru ??
+      calculateSoDemLuuTruFallback(ngayNhanPhong, ngayTraPhong),
+    [ngayNhanPhong, ngayTraPhong, selectedRoomOption?.soDemLuuTru],
+  );
+  const tongTienPhongDuKien = useMemo(
+    () =>
+      selectedRoomOption?.tongTienPhongDuKien ??
+      calculateTongTienPhongDuKienFallback({
+        giaMoiDem: giaThamKhao,
+        soDemLuuTru: soDemLuuTruDuKien,
+      }),
+    [giaThamKhao, selectedRoomOption?.tongTienPhongDuKien, soDemLuuTruDuKien],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -524,10 +566,24 @@ export function DatPhongForm({
               Chưa có kết quả kiểm tra phòng trống.
             </p>
           )}
-          {giaThamKhao ? (
+          {typeof soDemLuuTruDuKien === "number" ? (
             <p className="text-xs text-slate-600">
-              Giá tham khảo:{" "}
+              Số đêm lưu trú:{" "}
+              <span className="font-semibold text-slate-900">{soDemLuuTruDuKien}</span>
+            </p>
+          ) : null}
+          {typeof tongTienPhongDuKien === "number" ? (
+            <p className="text-xs text-slate-600">
+              Tổng tiền phòng dự kiến:{" "}
               <span className="font-semibold text-slate-900">
+                {formatCurrencyVnd(tongTienPhongDuKien)}
+              </span>
+            </p>
+          ) : null}
+          {giaThamKhao ? (
+            <p className="text-xs text-slate-500">
+              Giá mỗi đêm tham khảo:{" "}
+              <span className="font-semibold text-slate-700">
                 {formatCurrencyVnd(giaThamKhao)}
               </span>
             </p>

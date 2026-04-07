@@ -107,6 +107,8 @@ export interface DatPhong {
   ngayNhanPhong: string;
   ngayTraPhong: string;
   trangThai: TrangThaiDatPhong;
+  soDemLuuTru?: number;
+  tongTienPhongDuKien?: number;
   khachHang?: {
     khachHangId: number;
     hoTen: string;
@@ -152,6 +154,10 @@ export interface DatPhongApiRaw {
   ngayTraPhong?: string;
   NgayTraPhong?: string;
   ngay_tra_phong?: string;
+  soDemLuuTru?: number | string;
+  SoDemLuuTru?: number | string;
+  tongTienPhongDuKien?: number | string;
+  TongTienPhongDuKien?: number | string;
   trangThai?: string;
   TrangThai?: string;
   khachHang?: unknown;
@@ -170,6 +176,8 @@ export interface AvailablePhong {
   tenLoaiPhong?: string;
   trangThai?: string;
   giaThamKhao?: number;
+  soDemLuuTru?: number;
+  tongTienPhongDuKien?: number;
 }
 
 function isDatPhongLikeRecord(value: unknown): value is UnknownRecord {
@@ -390,6 +398,21 @@ export function normalizeDatPhong(raw: unknown): DatPhong {
     throw new Error("Không thể chuẩn hóa dữ liệu đặt phòng.");
   }
 
+  const soDemLuuTruRaw = pickNumber(record, ["soDemLuuTru", "SoDemLuuTru"]);
+  const soDemLuuTru =
+    typeof soDemLuuTruRaw === "number" && Number.isFinite(soDemLuuTruRaw) && soDemLuuTruRaw > 0
+      ? Math.floor(soDemLuuTruRaw)
+      : undefined;
+  const tongTienPhongDuKienRaw = pickNumber(record, [
+    "tongTienPhongDuKien",
+    "TongTienPhongDuKien",
+  ]);
+  const tongTienPhongDuKien =
+    typeof tongTienPhongDuKienRaw === "number" &&
+    Number.isFinite(tongTienPhongDuKienRaw)
+      ? tongTienPhongDuKienRaw
+      : undefined;
+
   const tenKhachHang =
     pickString(record, ["tenKhachHang", "TenKhachHang"]) ?? undefined;
   const tenLoaiPhong =
@@ -429,6 +452,8 @@ export function normalizeDatPhong(raw: unknown): DatPhong {
     trangThai: normalizeTrangThaiDatPhong(
       record.trangThai ?? record.TrangThai ?? record.status ?? record.Status,
     ),
+    soDemLuuTru,
+    tongTienPhongDuKien,
     khachHang,
     phong,
     tenKhachHang: tenKhachHang ?? khachHang?.hoTen,
@@ -478,6 +503,20 @@ export function normalizeAvailablePhong(raw: unknown): AvailablePhong {
     "roomNumber",
     "RoomNumber",
   ]);
+  const soDemLuuTruRaw = pickNumber(record, ["soDemLuuTru", "SoDemLuuTru"]);
+  const soDemLuuTru =
+    typeof soDemLuuTruRaw === "number" && Number.isFinite(soDemLuuTruRaw) && soDemLuuTruRaw > 0
+      ? Math.floor(soDemLuuTruRaw)
+      : undefined;
+  const tongTienPhongDuKienRaw = pickNumber(record, [
+    "tongTienPhongDuKien",
+    "TongTienPhongDuKien",
+  ]);
+  const tongTienPhongDuKien =
+    typeof tongTienPhongDuKienRaw === "number" &&
+    Number.isFinite(tongTienPhongDuKienRaw)
+      ? tongTienPhongDuKienRaw
+      : undefined;
 
   if (!soPhong) {
     throw new Error("Không thể chuẩn hóa dữ liệu phòng trống.");
@@ -502,6 +541,8 @@ export function normalizeAvailablePhong(raw: unknown): AvailablePhong {
     trangThai:
       pickString(record, ["trangThai", "TrangThai", "status", "Status"]) ??
       undefined,
+    soDemLuuTru,
+    tongTienPhongDuKien,
   };
 }
 

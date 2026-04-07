@@ -219,7 +219,10 @@ export default function PublicRoomDetailPage() {
               )}
             </section>
 
-            <RoomAvailabilityCheck loaiPhongId={roomDetail.LoaiPhong_ID} />
+            <RoomAvailabilityCheck
+              giaMoiDem={roomDetail.GiaCoBan}
+              loaiPhongId={roomDetail.LoaiPhong_ID}
+            />
           </div>
         )}
       </div>

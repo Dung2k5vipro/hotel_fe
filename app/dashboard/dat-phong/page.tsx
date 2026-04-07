@@ -18,6 +18,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
 import { useAuthUser } from "@/hooks/use-auth-user";
 import {
+  calculateSoDemLuuTruFallback,
+  calculateTongTienPhongDuKienFallback,
   mapDatPhongErrorMessage,
   normalizeDatPhongDateInput,
   toDatPhongBackendDateTime,
@@ -249,13 +251,27 @@ function deriveAvailableRoomsLocally(params: {
   return params.phongList
     .filter((room) => room.trangThai !== "BaoTri")
     .filter((room) => !occupiedRoomSet.has(room.soPhong))
-    .map((room) => ({
-      soPhong: room.soPhong,
-      loaiPhongId: room.loaiPhongId,
-      tenLoaiPhong: room.tenLoaiPhong ?? room.loaiPhong?.tenLoaiPhong,
-      trangThai: room.trangThai,
-      giaThamKhao: getPhongGiaThamKhao(room) ?? undefined,
-    }));
+    .map((room) => {
+      const giaThamKhao = getPhongGiaThamKhao(room) ?? undefined;
+      const soDemLuuTru = calculateSoDemLuuTruFallback(
+        params.ngayNhanPhong,
+        params.ngayTraPhong,
+      );
+
+      return {
+        soPhong: room.soPhong,
+        loaiPhongId: room.loaiPhongId,
+        tenLoaiPhong: room.tenLoaiPhong ?? room.loaiPhong?.tenLoaiPhong,
+        trangThai: room.trangThai,
+        giaThamKhao,
+        soDemLuuTru: soDemLuuTru ?? undefined,
+        tongTienPhongDuKien:
+          calculateTongTienPhongDuKienFallback({
+            giaMoiDem: giaThamKhao,
+            soDemLuuTru,
+          }) ?? undefined,
+      };
+    });
 }
 
 export default function DatPhongPage() {
@@ -427,6 +443,29 @@ export default function DatPhongPage() {
               getPhongGiaThamKhao(
                 phongList.find((room) => room.soPhong === item.soPhong),
               ) ?? undefined,
+            soDemLuuTru:
+              item.soDemLuuTru ??
+              calculateSoDemLuuTruFallback(
+                normalizeDatPhongDateInput(item.ngayNhanPhong),
+                normalizeDatPhongDateInput(item.ngayTraPhong),
+              ) ??
+              undefined,
+            tongTienPhongDuKien:
+              item.tongTienPhongDuKien ??
+              calculateTongTienPhongDuKienFallback({
+                giaMoiDem:
+                  getPhongGiaThamKhao(
+                    phongList.find((room) => room.soPhong === item.soPhong),
+                  ) ?? undefined,
+                soDemLuuTru:
+                  item.soDemLuuTru ??
+                  calculateSoDemLuuTruFallback(
+                    normalizeDatPhongDateInput(item.ngayNhanPhong),
+                    normalizeDatPhongDateInput(item.ngayTraPhong),
+                  ) ??
+                  undefined,
+              }) ??
+              undefined,
           },
         ],
         phongList,
@@ -499,13 +538,27 @@ export default function DatPhongPage() {
           : enrichAvailableRooms(
               latestPhongList
                 .filter((room) => room.trangThai !== "BaoTri")
-                .map((room) => ({
-                  soPhong: room.soPhong,
-                  loaiPhongId: room.loaiPhongId,
-                  tenLoaiPhong: room.tenLoaiPhong ?? room.loaiPhong?.tenLoaiPhong,
-                  trangThai: room.trangThai,
-                  giaThamKhao: getPhongGiaThamKhao(room) ?? undefined,
-                })),
+                .map((room) => {
+                  const giaThamKhao = getPhongGiaThamKhao(room) ?? undefined;
+                  const soDemLuuTru = calculateSoDemLuuTruFallback(
+                    params.ngayNhanPhong,
+                    params.ngayTraPhong,
+                  );
+
+                  return {
+                    soPhong: room.soPhong,
+                    loaiPhongId: room.loaiPhongId,
+                    tenLoaiPhong: room.tenLoaiPhong ?? room.loaiPhong?.tenLoaiPhong,
+                    trangThai: room.trangThai,
+                    giaThamKhao,
+                    soDemLuuTru: soDemLuuTru ?? undefined,
+                    tongTienPhongDuKien:
+                      calculateTongTienPhongDuKienFallback({
+                        giaMoiDem: giaThamKhao,
+                        soDemLuuTru,
+                      }) ?? undefined,
+                  };
+                }),
               latestPhongList,
             );
 
@@ -536,13 +589,27 @@ export default function DatPhongPage() {
         const softFallbackRooms = enrichAvailableRooms(
           latestPhongList
             .filter((room) => room.trangThai !== "BaoTri")
-            .map((room) => ({
-              soPhong: room.soPhong,
-              loaiPhongId: room.loaiPhongId,
-              tenLoaiPhong: room.tenLoaiPhong ?? room.loaiPhong?.tenLoaiPhong,
-              trangThai: room.trangThai,
-              giaThamKhao: getPhongGiaThamKhao(room) ?? undefined,
-            })),
+            .map((room) => {
+              const giaThamKhao = getPhongGiaThamKhao(room) ?? undefined;
+              const soDemLuuTru = calculateSoDemLuuTruFallback(
+                params.ngayNhanPhong,
+                params.ngayTraPhong,
+              );
+
+              return {
+                soPhong: room.soPhong,
+                loaiPhongId: room.loaiPhongId,
+                tenLoaiPhong: room.tenLoaiPhong ?? room.loaiPhong?.tenLoaiPhong,
+                trangThai: room.trangThai,
+                giaThamKhao,
+                soDemLuuTru: soDemLuuTru ?? undefined,
+                tongTienPhongDuKien:
+                  calculateTongTienPhongDuKienFallback({
+                    giaMoiDem: giaThamKhao,
+                    soDemLuuTru,
+                  }) ?? undefined,
+              };
+            }),
           latestPhongList,
         );
 

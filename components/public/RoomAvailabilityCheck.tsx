@@ -6,11 +6,17 @@ import { useRouter } from "next/navigation";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  calculateSoDemLuuTruFallback,
+  calculateTongTienPhongDuKienFallback,
+} from "@/lib/dat-phong";
+import { formatCurrencyVND } from "@/lib/hotel";
 import { checkAvailability } from "@/services/public/booking.service";
 import type { CheckAvailabilityResponse } from "@/types/public/public-booking";
 
 type RoomAvailabilityCheckProps = {
   loaiPhongId: number;
+  giaMoiDem?: number | null;
 };
 
 function pad2(value: number) {
@@ -91,7 +97,10 @@ function normalizeErrorMessage(error: unknown, fallback: string) {
   return message.length > 0 ? message : fallback;
 }
 
-export function RoomAvailabilityCheck({ loaiPhongId }: RoomAvailabilityCheckProps) {
+export function RoomAvailabilityCheck({
+  loaiPhongId,
+  giaMoiDem = null,
+}: RoomAvailabilityCheckProps) {
   const router = useRouter();
   const defaults = getDefaultDateTimes();
 
@@ -101,6 +110,15 @@ export function RoomAvailabilityCheck({ loaiPhongId }: RoomAvailabilityCheckProp
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CheckAvailabilityResponse | null>(null);
+  const soDemLuuTruDuKien =
+    result?.soDemLuuTru ??
+    calculateSoDemLuuTruFallback(ngayNhanPhong, ngayTraPhong);
+  const tongTienPhongDuKien =
+    result?.tongTienPhongDuKien ??
+    calculateTongTienPhongDuKienFallback({
+      giaMoiDem,
+      soDemLuuTru: soDemLuuTruDuKien,
+    });
 
   function resetCheckedState() {
     setError(null);
@@ -165,7 +183,9 @@ export function RoomAvailabilityCheck({ loaiPhongId }: RoomAvailabilityCheckProp
   return (
     <section className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
       <div>
-        <h3 className="text-lg font-semibold text-slate-900">Kiểm tra phòng theo thời gian</h3>
+        <h3 className="text-lg font-semibold text-slate-900">
+          Kiểm tra phòng theo thời gian
+        </h3>
         <p className="mt-1 text-sm text-slate-600">
           Chọn ngày giờ và số người để kiểm tra số phòng còn phù hợp.
         </p>
@@ -244,12 +264,18 @@ export function RoomAvailabilityCheck({ loaiPhongId }: RoomAvailabilityCheckProp
 
       {result ? (
         <Alert tone={result.available ? "success" : "info"}>
-          <p>
-            Trạng thái: {result.available ? "Còn phòng" : "Hết phòng"}
-          </p>
+          <p>Trạng thái: {result.available ? "Còn phòng" : "Hết phòng"}</p>
           <p className="mt-1">{result.message}</p>
           {typeof result.availableCount === "number" ? (
             <p className="mt-1">Số phòng phù hợp còn lại: {result.availableCount}</p>
+          ) : null}
+          {typeof soDemLuuTruDuKien === "number" ? (
+            <p className="mt-1">Số đêm lưu trú: {soDemLuuTruDuKien}</p>
+          ) : null}
+          {typeof tongTienPhongDuKien === "number" ? (
+            <p className="mt-1">
+              Tổng tiền phòng dự kiến: {formatCurrencyVND(tongTienPhongDuKien)}
+            </p>
           ) : null}
         </Alert>
       ) : null}
